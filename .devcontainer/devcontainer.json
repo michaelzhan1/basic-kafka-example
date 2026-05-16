@@ -1,0 +1,14 @@
+{
+    "name": "C++ Producer/Consumer Environment",
+    "dockerComposeFile": "../compose.yaml",
+    "service": "producer",
+    "workspaceFolder": "/app",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools"
+            ]
+        }
+    }
+}

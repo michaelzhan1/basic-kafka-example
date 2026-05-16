@@ -1,0 +1,67 @@
+services:
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Listen on all interfaces for internal traffic and controller traffic
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+
+      # Tell clients (like your producer/consumer) to connect via the hostname 'kafka'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # for development, we can set replication factors to 1 since we only have one broker
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  kafka-init:
+    image: apache/kafka:latest
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: [
+      "/opt/kafka/bin/kafka-topics.sh",
+      "--create",
+      "--bootstrap-server", "kafka:9092",
+      "--topic", "hello-world",
+      "--partitions", "3",
+      "--replication-factor", "1",
+      "--if-not-exists",
+    ]
+
+  producer:
+    build: .
+    container_name: producer
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    command: sleep infinity
+
+  consumer:
+    build: .
+    container_name: consumer
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    command: sleep infinity
