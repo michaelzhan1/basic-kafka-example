@@ -1,7 +1,15 @@
 services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    ports:
+      - 5432:5432
+    volumes:
+      - ./scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: logs_db
   kafka:
     image: apache/kafka:latest
-    container_name: kafka
     ports:
       - 9092:9092
     environment:
@@ -62,6 +70,8 @@ services:
     depends_on:
       kafka-init:
         condition: service_completed_successfully
+      timescaledb:
+        condition: service_healthy
     volumes:
       - .:/app
     command: sleep infinity
