@@ -7,3 +7,8 @@ CREATE TABLE logs (
 );
 
 SELECT create_hypertable('logs', 'ts');
+
+INSERT INTO logs (ts, level, message) VALUES
+    (NOW(), 'INFO', 'This is an info log message on startup.'),
+    (NOW(), 'ERROR', 'This is an error log message on startup.'),
+    (NOW(), 'DEBUG', 'This is a debug log message on startup.');
