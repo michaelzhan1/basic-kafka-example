@@ -1,7 +1,9 @@
 # compiler and flags
 CXX      := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude -Isrc/common -O2 -pthread
-LDFLAGS := -lrdkafka++ -lrdkafka -lpqxx -lpq -lpthread
+CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude -Isrc/common -O2
+KAFKA_LDFLAGS := -lrdkafka++ -lrdkafka
+DB_LDFLAGS := -lpqxx -lpq
+THREAD_LDFLAGS := -lpthread
 
 # directories
 SRC_DIR   := ./src
@@ -37,11 +39,11 @@ producer: $(PRODUCER_EXE)
 # linking executables
 $(CONSUMER_EXE): $(CONSUMER_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(KAFKA_LDFLAGS) $(DB_LDFLAGS)
 
 $(PRODUCER_EXE): $(PRODUCER_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(KAFKA_LDFLAGS) $(THREAD_LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
@@ -50,3 +52,16 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR)
+
+# docker stuff
+docker-producer-build:
+	docker compose build producer
+
+docker-consumer-build:
+	docker compose build consumer
+
+docker-producer:
+	docker compose up producer
+
+docker-consumer:
+	docker compose up --scale consumer=4 consumer
