@@ -111,13 +111,3 @@ services:
         condition: service_completed_successfully
       pgbouncer:
         condition: service_healthy
-  
-  dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: dev
-    tty: true
-    stdin_open: true
-    volumes:
-      - .:/app
