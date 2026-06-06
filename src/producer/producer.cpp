@@ -70,7 +70,7 @@ void producer_worker_job(std::stop_token stop_token,
 
         std::unique_lock<std::mutex> lock(shutdown_mtx);
         if (shutdown_cv.wait_for(
-                lock, std::chrono::milliseconds(1500 + thread_id * 100),
+                lock, std::chrono::milliseconds(5000 + thread_id * 100), // 5 seconds for now
                 [] { return signal_received; })) {
             break;  // exit loop if signal received
         }

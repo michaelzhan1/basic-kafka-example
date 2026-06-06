@@ -2,7 +2,12 @@
 
 #include <csignal>
 #include <iostream>
+#include <pqxx/pqxx>
 #include <string>
+#include <nlohmann/json.hpp>
+
+#include "database.hpp"
+#include "logentry.hpp"
 
 static bool run = true;
 static void sigterm(int) { run = false; }
@@ -64,28 +69,40 @@ int main() {
 
     // set up database connection
     try {
+        pqxx::connection db_conn(
+            "postgresql://postgres:password@pgbouncer:6432/logs_db");
+
         while (run) {
             RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
-    
+
             switch (msg->err()) {
-                case RdKafka::ERR_NO_ERROR:
-                    std::cout << "Received message on partition "
-                            << msg->partition() << " at offset " << msg->offset()
-                            << ":\n"
-                            << static_cast<const char*>(msg->payload())
-                            << std::endl;
+                case RdKafka::ERR_NO_ERROR: {
+                    std::string payload(
+                        static_cast<const char*>(msg->payload()), msg->len());
+                    std::cout << "Received message: " << payload << std::endl;
+                    
+                    nlohmann::json payload_json;
+                    try {
+                        payload_json = nlohmann::json::parse(payload);
+                    } catch (const nlohmann::json::parse_error& e) {
+                        std::cerr << "JSON parse error: " << e.what()
+                                  << " Payload: " << payload << std::endl;
+                        break;  // skip this message
+                    }
+                    insert_log(db_conn, LogEntry(payload_json));
                     break;
+                }
                 case RdKafka::ERR__TIMED_OUT:
                     // no message received within timeout, continue
                     break;
                 default:
                     std::cerr << "Error consuming message: " << msg->errstr()
-                            << std::endl;
+                              << std::endl;
                     break;
             }
             delete msg;
         }
-    } catch (std::exception const &e) {
+    } catch (std::exception const& e) {
         std::cerr << "Database connection error: " << e.what() << std::endl;
         consumer->close();
         delete consumer;

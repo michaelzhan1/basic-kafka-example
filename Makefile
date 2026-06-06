@@ -1,7 +1,7 @@
 # compiler and flags
 CXX      := g++
 CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude -Isrc/common -O2 -pthread
-LDFLAGS := -lrdkafka++ -lrdkafka -lpthread
+LDFLAGS := -lrdkafka++ -lrdkafka -lpqxx -lpq -lpthread
 
 # directories
 SRC_DIR   := ./src
@@ -19,9 +19,13 @@ CONSUMER_SRCS := $(wildcard $(SRC_DIR)/consumer/*.cpp)
 PRODUCER_SRCS := $(wildcard $(SRC_DIR)/producer/*.cpp)
 
 # object files
-COMMON_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(COMMON_SRCS))
-CONSUMER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(CONSUMER_SRCS)) $(COMMON_OBJS)
-PRODUCER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(PRODUCER_SRCS)) $(COMMON_OBJS)
+COMMON_SHARED_SRCS := $(filter-out $(SRC_DIR)/common/database.cpp, $(COMMON_SRCS))
+COMMON_DB_SRCS := $(SRC_DIR)/common/database.cpp
+
+COMMON_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(COMMON_SHARED_SRCS))
+COMMON_DB_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(COMMON_DB_SRCS))
+CONSUMER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(CONSUMER_SRCS)) $(COMMON_SHARED_OBJS) $(COMMON_DB_OBJS)
+PRODUCER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(PRODUCER_SRCS)) $(COMMON_SHARED_OBJS)
 
 .PHONY: all clean consumer producer
 
