@@ -1,14 +1,16 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
+CREATE TYPE status_type AS ENUM ('OK', 'WARN', 'ERROR');
+
 CREATE TABLE logs (
     ts TIMESTAMPTZ NOT NULL,
-    level TEXT NOT NULL,
-    message TEXT NOT NULL
+    worker_id TEXT NOT NULL,
+    status status_type NOT NULL
 );
 
 SELECT create_hypertable('logs', 'ts');
 
-INSERT INTO logs (ts, level, message) VALUES
-    (NOW(), 'INFO', 'This is an info log message on startup.'),
-    (NOW(), 'ERROR', 'This is an error log message on startup.'),
-    (NOW(), 'DEBUG', 'This is a debug log message on startup.');
+INSERT INTO logs (ts, worker_id, status) VALUES
+    (NOW(), 'worker 1', 'OK'),
+    (NOW(), 'worker 2', 'ERROR'),
+    (NOW(), 'worker 3', 'WARN');

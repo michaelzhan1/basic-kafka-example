@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include <pqxx/pqxx>
-
 static bool run = true;
 static void sigterm(int) { run = false; }
 
@@ -66,16 +64,11 @@ int main() {
 
     // set up database connection
     try {
-        pqxx::connection c{"postgresql://postgres:password@localhost:5432/logs_db"};
-
         while (run) {
             RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
     
             switch (msg->err()) {
                 case RdKafka::ERR_NO_ERROR:
-                    
-
-
                     std::cout << "Received message on partition "
                             << msg->partition() << " at offset " << msg->offset()
                             << ":\n"

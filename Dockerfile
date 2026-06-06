@@ -3,9 +3,10 @@ FROM ubuntu:24.04 AS base
 RUN apt-get update && apt-get install -y \
     build-essential \
     librdkafka-dev \
+    nlohmann-json3-dev \
  && rm -rf /var/lib/apt/lists/*
-
 COPY ./ /app
+WORKDIR /app
 
 # producer
 FROM base AS producer
@@ -35,5 +36,3 @@ RUN apt-get update && apt-get install -y \
     gdb \
     valgrind \
     && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
