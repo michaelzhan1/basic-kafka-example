@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include <pqxx/pqxx>
+
 static bool run = true;
 static void sigterm(int) { run = false; }
 
@@ -62,27 +64,39 @@ int main() {
 
     std::cout << "Subscribed to topic: " << topic_name << std::endl;
 
-    // consume messages
-    while (run) {
-        RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
+    // set up database connection
+    try {
+        pqxx::connection c{"postgresql://postgres:password@localhost:5432/logs_db"};
 
-        switch (msg->err()) {
-            case RdKafka::ERR_NO_ERROR:
-                std::cout << "Received message on partition "
-                          << msg->partition() << " at offset " << msg->offset()
-                          << ":\n"
-                          << static_cast<const char*>(msg->payload())
-                          << std::endl;
-                break;
-            case RdKafka::ERR__TIMED_OUT:
-                // no message received within timeout, continue
-                break;
-            default:
-                std::cerr << "Error consuming message: " << msg->errstr()
-                          << std::endl;
-                break;
+        while (run) {
+            RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
+    
+            switch (msg->err()) {
+                case RdKafka::ERR_NO_ERROR:
+                    
+
+
+                    std::cout << "Received message on partition "
+                            << msg->partition() << " at offset " << msg->offset()
+                            << ":\n"
+                            << static_cast<const char*>(msg->payload())
+                            << std::endl;
+                    break;
+                case RdKafka::ERR__TIMED_OUT:
+                    // no message received within timeout, continue
+                    break;
+                default:
+                    std::cerr << "Error consuming message: " << msg->errstr()
+                            << std::endl;
+                    break;
+            }
+            delete msg;
         }
-        delete msg;
+    } catch (std::exception const &e) {
+        std::cerr << "Database connection error: " << e.what() << std::endl;
+        consumer->close();
+        delete consumer;
+        return 1;
     }
 
     // cleanup
