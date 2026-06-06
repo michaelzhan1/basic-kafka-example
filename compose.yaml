@@ -26,9 +26,10 @@ services:
       DB_PASSWORD: password
       DB_HOST: timescaledb
       DB_PORT: 5432
+      DB_NAMES: logs_db
       LISTEN_ADDR: 0.0.0.0
       LISTEN_PORT: 6432
-      AUTH_TYPE: md5
+      AUTH_TYPE: plain
       AUTH_FILE: /etc/pgbouncer/userlist.txt
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 100
@@ -36,7 +37,7 @@ services:
     volumes:
       - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
     healthcheck:
-      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -d pgbouncer"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -108,8 +109,8 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
-      # pgbouncer:
-      #   condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
   
   dev:
     build:
