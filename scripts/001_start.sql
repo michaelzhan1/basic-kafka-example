@@ -9,8 +9,4 @@ CREATE TABLE logs (
 );
 
 SELECT create_hypertable('logs', 'ts');
-
-INSERT INTO logs (ts, worker_id, status) VALUES
-    (NOW(), 'worker 1', 'OK'),
-    (NOW(), 'worker 2', 'ERROR'),
-    (NOW(), 'worker 3', 'WARN');
+SELECT add_retention_policy('logs', INTERVAL '5 minutes');
