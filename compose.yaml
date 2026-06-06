@@ -1,7 +1,49 @@
 services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    ports:
+      - 5432:5432
+    volumes:
+      - ./scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: logs_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    ports:
+      - 6432:6432
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAMES: logs_db
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: 6432
+      AUTH_TYPE: plain
+      AUTH_FILE: /etc/pgbouncer/userlist.txt
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 100
+      DEFAULT_POOL_SIZE: 20
+    volumes:
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -d pgbouncer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   kafka:
     image: apache/kafka:latest
-    container_name: kafka
     ports:
       - 9092:9092
     environment:
@@ -47,21 +89,25 @@ services:
     ]
 
   producer:
-    build: .
-    container_name: producer
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: producer
     depends_on:
+      kafka:
+        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
-    volumes:
-      - .:/app
-    command: sleep infinity
 
   consumer:
-    build: .
-    container_name: consumer
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: consumer
     depends_on:
+      kafka:
+        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
-    volumes:
-      - .:/app
-    command: sleep infinity
+      pgbouncer:
+        condition: service_healthy

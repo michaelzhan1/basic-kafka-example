@@ -2,7 +2,12 @@
 
 #include <csignal>
 #include <iostream>
+#include <pqxx/pqxx>
 #include <string>
+#include <nlohmann/json.hpp>
+
+#include "database.hpp"
+#include "logentry.hpp"
 
 static bool run = true;
 static void sigterm(int) { run = false; }
@@ -32,8 +37,8 @@ int main() {
         return 1;
     }
 
-    // offset reset policy: start from earliest if no committed offset
-    if (conf->set("auto.offset.reset", "earliest", errstr) !=
+    // offset reset policy: only read new messages
+    if (conf->set("auto.offset.reset", "latest", errstr) !=
         RdKafka::Conf::CONF_OK) {
         std::cerr << "Failed to set auto.offset.reset: " << errstr << std::endl;
         return 1;
@@ -62,27 +67,46 @@ int main() {
 
     std::cout << "Subscribed to topic: " << topic_name << std::endl;
 
-    // consume messages
-    while (run) {
-        RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
+    // set up database connection
+    try {
+        pqxx::connection db_conn(
+            "postgresql://postgres:password@pgbouncer:6432/logs_db");
 
-        switch (msg->err()) {
-            case RdKafka::ERR_NO_ERROR:
-                std::cout << "Received message on partition "
-                          << msg->partition() << " at offset " << msg->offset()
-                          << ":\n"
-                          << static_cast<const char*>(msg->payload())
-                          << std::endl;
-                break;
-            case RdKafka::ERR__TIMED_OUT:
-                // no message received within timeout, continue
-                break;
-            default:
-                std::cerr << "Error consuming message: " << msg->errstr()
-                          << std::endl;
-                break;
+        while (run) {
+            RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
+
+            switch (msg->err()) {
+                case RdKafka::ERR_NO_ERROR: {
+                    std::string payload(
+                        static_cast<const char*>(msg->payload()), msg->len());
+                    std::cout << "Received message: " << payload << std::endl;
+                    
+                    nlohmann::json payload_json;
+                    try {
+                        payload_json = nlohmann::json::parse(payload);
+                    } catch (const nlohmann::json::parse_error& e) {
+                        std::cerr << "JSON parse error: " << e.what()
+                                  << " Payload: " << payload << std::endl;
+                        break;  // skip this message
+                    }
+                    insert_log(db_conn, LogEntry(payload_json));
+                    break;
+                }
+                case RdKafka::ERR__TIMED_OUT:
+                    // no message received within timeout, continue
+                    break;
+                default:
+                    std::cerr << "Error consuming message: " << msg->errstr()
+                              << std::endl;
+                    break;
+            }
+            delete msg;
         }
-        delete msg;
+    } catch (std::exception const& e) {
+        std::cerr << "Database connection error: " << e.what() << std::endl;
+        consumer->close();
+        delete consumer;
+        return 1;
     }
 
     // cleanup

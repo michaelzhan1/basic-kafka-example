@@ -6,13 +6,14 @@
 #include <csignal>
 #include <iostream>
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include <random>
 #include <stop_token>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "json.hpp"
+#include "logentry.hpp"
 #include "status.hpp"
 
 std::condition_variable shutdown_cv;
@@ -50,25 +51,26 @@ void producer_worker_job(std::stop_token stop_token,
             status = Status::ERROR;
         }
 
-        std::string json_message = generate_json_message(worker_id, status);
+        LogEntry log(worker_id, status);
+        std::string msg = log.to_json().dump();
 
         shared_producer->produce(
             topic,
             RdKafka::Topic::PARTITION_UA,    // unassigned, let kafka choose
             RdKafka::Producer::RK_MSG_COPY,  // copy payload
-            const_cast<char*>(json_message.c_str()),  // message payload
-            json_message.size(),                      // payload size
-            nullptr, 0,  // optional key and its size
-            0,           // timestamp (0 defaults to current time)
-            nullptr      // message opaque, not used here
+            const_cast<char*>(msg.c_str()),  // message payload
+            msg.size(),                      // payload size
+            nullptr, 0,                      // optional key and its size
+            0,       // timestamp (0 defaults to current time)
+            nullptr  // message opaque, not used here
         );
 
-        std::cout << "[" << worker_id << "] Produced message: " << json_message
+        std::cout << "[" << worker_id << "] Produced message: " << msg
                   << std::endl;
 
         std::unique_lock<std::mutex> lock(shutdown_mtx);
         if (shutdown_cv.wait_for(
-                lock, std::chrono::milliseconds(1500 + thread_id * 100),
+                lock, std::chrono::milliseconds(5000 + thread_id * 100), // 5 seconds for now
                 [] { return signal_received; })) {
             break;  // exit loop if signal received
         }

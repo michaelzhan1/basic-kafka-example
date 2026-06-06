@@ -1,7 +1,14 @@
 {
-    "name": "C++ Producer/Consumer Environment",
-    "dockerComposeFile": "../compose.yaml",
-    "service": "producer",
+    "name": "C++ Environment",
+    "dockerComposeFile": "../dev-compose.yaml",
+    "service": "dev",
+    "runServices": [
+        "dev"
+    ],
+   "mounts": [
+        "type=bind,source=${localEnv:HOME}/.ssh,target=/home/devuser/.ssh,readonly"
+    ],
+    "containerUser": "devuser",
     "workspaceFolder": "/app",
     "customizations": {
         "vscode": {
