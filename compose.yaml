@@ -121,3 +121,5 @@ services:
       context: .
       dockerfile: Dockerfile
       target: server
+    ports:
+      - 8080:8080
