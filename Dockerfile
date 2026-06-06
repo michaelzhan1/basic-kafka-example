@@ -23,6 +23,11 @@ RUN apt-get update && apt-get install -y software-properties-common \
 RUN make consumer
 CMD ["./build/bin/consumer"]
 
+# server
+FROM base AS server
+RUN make server
+CMD ["./build/bin/server"]
+
 # dev
 FROM base AS dev
 # Install all dependencies for both services + development tools
