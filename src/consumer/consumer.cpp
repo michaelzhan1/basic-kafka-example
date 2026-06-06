@@ -32,8 +32,8 @@ int main() {
         return 1;
     }
 
-    // offset reset policy: start from earliest if no committed offset
-    if (conf->set("auto.offset.reset", "earliest", errstr) !=
+    // offset reset policy: only read new messages
+    if (conf->set("auto.offset.reset", "latest", errstr) !=
         RdKafka::Conf::CONF_OK) {
         std::cerr << "Failed to set auto.offset.reset: " << errstr << std::endl;
         return 1;
