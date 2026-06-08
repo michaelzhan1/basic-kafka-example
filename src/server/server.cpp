@@ -1,11 +1,15 @@
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <poll.h>
 
+#include <cerrno>
 #include <csignal>
+#include <cstdio>
 #include <iostream>
 #include <string>
+
+#include "http.hpp"
 
 static bool run = true;
 static void sigterm(int) { run = false; }
@@ -26,59 +30,62 @@ int main() {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(8080);
 
+    // start server (let up to 3 clients wait in the queue)
+    if (bind(server_fd, (sockaddr*)&address, sizeof(address)) < 0) {
+        perror("Bind failed");
+        close(server_fd);
+        return 1;
+    }
+    listen(server_fd, 3);
+
     // set up polling
     struct pollfd pfd;
     pfd.fd = server_fd;
     pfd.events = POLLIN;
 
-    // start server (let up to 3 clients wait in the queue)
-    if (bind(server_fd, (sockaddr*)&address, sizeof(address)) < 0) {
-        std::cerr << "Failed to bind socket" << std::endl;
-        close(server_fd);
-        return 1;
-    }
-    listen(server_fd, 3); 
-
-    std::cout << "Server is listening on port 8080. Press Ctrl+C to stop." << std::endl;
+    std::cout << "Server is listening on port 8080. Press Ctrl+C to stop."
+              << std::endl;
 
     while (run) {
-        int poll_ret = poll(&pfd, 1, 500); // wait for 0.5 seconds
+        int poll_ret = poll(&pfd, 1, 500);  // wait for 0.5 seconds
         if (poll_ret < 0) {
             if (errno == EINTR) {
-                continue; // interrupted by signal, check run flag again
+                continue;  // interrupted by signal, check run flag again
             }
             std::cerr << "Poll error" << std::endl;
             break;
         } else if (poll_ret == 0) {
-            continue; // timeout, check run flag again
+            continue;  // timeout, check run flag again
         }
 
         int new_socket = accept(server_fd, nullptr, nullptr);
         if (new_socket < 0) {
-            std::cerr << "Failed to accept connection" << std::endl;
-            continue;
+            continue;  // error accepting connection, try again
         }
 
-        // copy request
-        char buffer[30000] = {0};
-        read(new_socket, buffer, 30000);
+        // read request
+        std::string request = receive_request(new_socket);
 
-        // log request
-        std::cout << "Received request:\n" << buffer << std::endl;
+        if (!request.empty()) {
+            // log request
+            std::cout << "Received request:\n" << request.substr(0, 100) << "..." << std::endl;
 
-        // built response
-        std::string html = "<html><body><h1>Hello, World!</h1></body></html>";
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: " +
-            std::to_string(html.size()) +
-            "\r\n"
-            "\r\n" +
-            html;
+            // build response
+            std::string html =
+                "<html><body><h1>Hello, World!</h1></body></html>";
+            std::string response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n"
+                "Content-Length: " +
+                std::to_string(html.size()) +
+                "\r\n"
+                "\r\n" +
+                html;
 
-        // send response
-        send(new_socket, response.c_str(), response.size(), 0);
+            // send response
+            send(new_socket, response.c_str(), response.size(), 0);
+        }
+
         close(new_socket);
     }
 
