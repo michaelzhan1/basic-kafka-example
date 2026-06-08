@@ -83,7 +83,11 @@ int main() {
                 html;
 
             // send response
-            send(new_socket, response.c_str(), response.size(), 0);
+            if (send_response(new_socket, response)) {
+                std::cout << "Response sent successfully" << std::endl;
+            } else {
+                std::cerr << "Failed to send response" << std::endl;
+            }
         }
 
         close(new_socket);

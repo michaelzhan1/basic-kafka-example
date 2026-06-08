@@ -45,3 +45,22 @@ std::string receive_request(int socket) {
 
     return request;
 }
+
+bool send_response(int socket, const std::string& response) {
+    ssize_t total_sent = 0;
+    ssize_t response_length = response.size();
+
+    while (total_sent < response_length) {
+        ssize_t bytes_sent =
+            send(socket, response.c_str() + total_sent, response_length - total_sent, 0);
+
+        if (bytes_sent < 0) {
+            perror("Send error");
+            return false;
+        }
+
+        total_sent += bytes_sent;
+    }
+
+    return true;
+}
