@@ -117,21 +117,10 @@ int main() {
                 // build response
                 std::string html =
                     "<html><body><h1>Hello, World!</h1></body></html>";
-                std::string response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/html\r\n"
-                    "Content-Length: " +
-                    std::to_string(html.size()) +
-                    "\r\n"
-                    "\r\n" +
-                    html;
 
                 // send response
-                if (send_response(new_socket, response)) {
-                    std::cout << "Response sent successfully" << std::endl;
-                } else {
-                    std::cerr << "Failed to send response" << std::endl;
-                }
+                send_response(new_socket, html, HttpStatus::OK,
+                              HttpContentType::TEXT_HTML);
             }
 
             close(new_socket);

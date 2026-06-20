@@ -46,13 +46,52 @@ std::string receive_request(int socket) {
     return request;
 }
 
-bool send_response(int socket, const std::string& response) {
+std::string http_status_to_string(HttpStatus status) {
+    switch (status) {
+        case OK:
+            return "200 OK";
+        case BAD_REQUEST:
+            return "400 Bad Request";
+        case NOT_FOUND:
+            return "404 Not Found";
+        case INTERNAL_SERVER_ERROR:
+            return "500 Internal Server Error";
+        default:
+            return "500 Internal Server Error";  // default to internal server
+                                                 // error
+    }
+}
+
+std::string http_content_type_to_string(HttpContentType content_type) {
+    switch (content_type) {
+        case TEXT_HTML:
+            return "text/html";
+        case TEXT_PLAIN:
+            return "text/plain";
+        case APPLICATION_JSON:
+            return "application/json";
+        default:
+            return "text/plain";  // default to plain text
+    }
+}
+
+bool send_response(int socket, const std::string& msg, HttpStatus status,
+                   HttpContentType content_type) {
+    std::string response = "";
+
+    response += "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
+    response +=
+        "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
+    response += "Content-Length: " + std::to_string(msg.size()) + "\r\n";
+    response += "\r\n";  // end of headers
+    response += msg;     // body
+
     ssize_t total_sent = 0;
     ssize_t response_length = response.size();
 
     while (total_sent < response_length) {
-        ssize_t bytes_sent =
-            send(socket, response.c_str() + total_sent, response_length - total_sent, 0);
+        ssize_t bytes_sent = send(socket, response.c_str() + total_sent,
+                                  response_length - total_sent, 0);
 
         if (bytes_sent < 0) {
             perror("Send error");
