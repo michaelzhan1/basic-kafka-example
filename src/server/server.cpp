@@ -30,19 +30,33 @@ class SignalHandler {
     static bool running() { return run.load(); }
 };
 
+/**
+ * Class representing the HTTP server. It abstracts out setup and accepting and
+ * handling connections.
+ */
 class Server {
    private:
     int port_;
     int server_fd_;
 
    public:
+    /**
+     * Constructor
+     */
     explicit Server(int port) : port_(port), server_fd_(-1) {}
+
+    /**
+     * Destructor
+     */
     ~Server() {
         if (server_fd_ != -1) {
             close(server_fd_);
         }
     }
 
+    /**
+     * Setup
+     */
     void start() {
         server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (server_fd_ < 0) {
@@ -72,9 +86,33 @@ class Server {
                   << ". Press Ctrl+C to stop." << std::endl;
     }
 
+    /**
+     * Accept a new connection
+     */
     int accept_connection() { return accept(server_fd_, nullptr, nullptr); }
 
     int get_fd() const { return server_fd_; }
+
+    void handle_client(int client_socket) {
+        // read request
+        std::string request = receive_request(client_socket);
+
+        if (!request.empty()) {
+            // log request
+            std::cout << "Received request:\n"
+                      << request.substr(0, 100) << "..." << std::endl;
+
+            // build response
+            std::string html =
+                "<html><body><h1>Hello, World!</h1></body></html>";
+
+            // send response
+            send_response(client_socket, html, HttpStatus::OK,
+                          HttpContentType::TEXT_HTML);
+        }
+
+        close(client_socket);
+    }
 };
 
 int main() {
@@ -106,24 +144,7 @@ int main() {
                 continue;  // error accepting connection, try again
             }
 
-            // read request
-            std::string request = receive_request(new_socket);
-
-            if (!request.empty()) {
-                // log request
-                std::cout << "Received request:\n"
-                          << request.substr(0, 100) << "..." << std::endl;
-
-                // build response
-                std::string html =
-                    "<html><body><h1>Hello, World!</h1></body></html>";
-
-                // send response
-                send_response(new_socket, html, HttpStatus::OK,
-                              HttpContentType::TEXT_HTML);
-            }
-
-            close(new_socket);
+            server.handle_client(new_socket);
         }
     } catch (const std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
