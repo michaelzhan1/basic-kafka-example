@@ -24,6 +24,7 @@ class LogEntry {
     Timestamp get_timestamp() const;
 
    private:
+    // members
     std::string worker_id;
     Status status;
     Timestamp timestamp;
