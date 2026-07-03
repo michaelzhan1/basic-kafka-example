@@ -9,19 +9,16 @@
 
 #include "database.hpp"
 #include "logentry.hpp"
-
-static bool run = true;
-static void sigterm(int) { run = false; }
+#include "signalhandler.hpp"
 
 int main() {
+    SignalHandler::setup();
+    
     std::string brokers = "kafka:9092";
     std::string topic_name = "hello-world";
     std::string group_id = "my-consumer-group";
 
-    // signal handlers for graceful shutdown
-    std::signal(SIGINT, sigterm);
-    std::signal(SIGTERM, sigterm);
-
+    // configuration object
     std::string errstr;
     RdKafka::Conf* conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
 
@@ -80,7 +77,7 @@ int main() {
         return 1;
     }
 
-    while (run) {
+    while (SignalHandler::running()) {
         if (!db_conn) {
             try {
                 std::cout << "Attempting to reconnect to database..."
