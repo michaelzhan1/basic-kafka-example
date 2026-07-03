@@ -2,9 +2,10 @@
 
 #include <csignal>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <pqxx/pqxx>
 #include <string>
-#include <nlohmann/json.hpp>
+#include <thread>
 
 #include "database.hpp"
 #include "logentry.hpp"
@@ -68,45 +69,72 @@ int main() {
     std::cout << "Subscribed to topic: " << topic_name << std::endl;
 
     // set up database connection
+    std::unique_ptr<pqxx::connection> db_conn;
     try {
-        pqxx::connection db_conn(
+        db_conn = std::make_unique<pqxx::connection>(
             "postgresql://postgres:password@pgbouncer:6432/logs_db");
-
-        while (run) {
-            RdKafka::Message* msg = consumer->consume(1000);  // timeout in ms
-
-            switch (msg->err()) {
-                case RdKafka::ERR_NO_ERROR: {
-                    std::string payload(
-                        static_cast<const char*>(msg->payload()), msg->len());
-                    std::cout << "Received message: " << payload << std::endl;
-                    
-                    nlohmann::json payload_json;
-                    try {
-                        payload_json = nlohmann::json::parse(payload);
-                    } catch (const nlohmann::json::parse_error& e) {
-                        std::cerr << "JSON parse error: " << e.what()
-                                  << " Payload: " << payload << std::endl;
-                        break;  // skip this message
-                    }
-                    insert_log(db_conn, LogEntry(payload_json));
-                    break;
-                }
-                case RdKafka::ERR__TIMED_OUT:
-                    // no message received within timeout, continue
-                    break;
-                default:
-                    std::cerr << "Error consuming message: " << msg->errstr()
-                              << std::endl;
-                    break;
-            }
-            delete msg;
-        }
-    } catch (std::exception const& e) {
+    } catch (const std::exception& e) {
         std::cerr << "Database connection error: " << e.what() << std::endl;
         consumer->close();
         delete consumer;
         return 1;
+    }
+
+    while (run) {
+        if (!db_conn) {
+            try {
+                std::cout << "Attempting to reconnect to database..."
+                          << std::endl;
+                db_conn = std::make_unique<pqxx::connection>(
+                    "postgresql://postgres:password@pgbouncer:6432/logs_db");
+            } catch (const std::exception& e) {
+                std::cerr << "Reconnection failed: " << e.what()
+                          << ". Retrying in 5s..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+                continue;  // Skip the rest of the loop and try again
+            }
+        }
+
+        RdKafka::Message* msg = consumer->consume(1000);  // 1000 ms
+
+        switch (msg->err()) {
+            case RdKafka::ERR_NO_ERROR: {
+                // receive message
+                std::string payload(static_cast<const char*>(msg->payload()),
+                                    msg->len());
+                std::cout << "Received message: " << payload << std::endl;
+
+                // parse message
+                nlohmann::json payload_json;
+                try {
+                    payload_json = nlohmann::json::parse(payload);
+                } catch (const nlohmann::json::parse_error& e) {
+                    std::cerr << "JSON parse error: " << e.what()
+                              << " Payload: " << payload << std::endl;
+                    break;  // skip this message
+                }
+
+                // insert into database
+                try {
+                    insert_log(*db_conn, LogEntry(payload_json));
+                } catch (const pqxx::broken_connection& e) {
+                    std::cerr << "Database connection lost: " << e.what()
+                              << std::endl;
+                    db_conn.reset();
+                } catch (const std::exception& e) {
+                    std::cerr << "Insert failed: " << e.what() << std::endl;
+                }
+                break;
+            }
+            case RdKafka::ERR__TIMED_OUT:
+                // no message received within timeout, continue
+                break;
+            default:
+                std::cerr << "Error consuming message: " << msg->errstr()
+                          << std::endl;
+                break;
+        }
+        delete msg;
     }
 
     // cleanup
