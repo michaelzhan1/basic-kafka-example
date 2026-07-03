@@ -1,5 +1,8 @@
 #pragma once
 
+#include <atomic>
+#include <csignal>
+
 /**
  * Class to handle SIGINT and SIGTERM signals for graceful shutdown of the
  * server.

@@ -1,65 +1,87 @@
-# compiler and flags
-CXX      := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude -Isrc/common -O2
-KAFKA_LDFLAGS := -lrdkafka++ -lrdkafka
-DB_LDFLAGS := -lpqxx -lpq
-THREAD_LDFLAGS := -lpthread
+# compiler
+CXX := g++
+CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Iinclude -Isrc/common
+
+AR := ar
+ARFLAGS := rcs
+
+# libraries
+KAFKA_LIBS := -lrdkafka++ -lrdkafka
+DB_LIBS := -lpqxx -lpq
+THREAD_LIBS := -pthread
 
 # directories
-SRC_DIR   := ./src
-BUILD_DIR := ./build
-BIN_DIR   := $(BUILD_DIR)/bin
-OBJ_DIR   := $(BUILD_DIR)/obj
+SRC := ./src
+BUILD := ./build
+BIN := $(BUILD)/bin
+OBJ := $(BUILD)/obj
+LIB := $(BUILD)/lib
 
-# executable
-CONSUMER_EXE := $(BIN_DIR)/consumer
-PRODUCER_EXE := $(BIN_DIR)/producer
-SERVER_EXE := $(BIN_DIR)/server
+# executables
+PRODUCER := $(BIN)/producer
+CONSUMER := $(BIN)/consumer
+SERVER := $(BIN)/server
 
-# find all cpp files
-COMMON_SRCS := $(wildcard $(SRC_DIR)/common/*.cpp)
-CONSUMER_SRCS := $(wildcard $(SRC_DIR)/consumer/*.cpp)
-PRODUCER_SRCS := $(wildcard $(SRC_DIR)/producer/*.cpp)
-SERVER_SRCS := $(wildcard $(SRC_DIR)/server/*.cpp)
+# sources
+COMMON_SRCS := $(wildcard $(SRC)/common/*.cpp)
+DB_SRC := $(SRC)/common/database.cpp
+COMMON_CORE_SRCS := $(filter-out $(DB_SRC),$(COMMON_SRCS))
+
+PRODUCER_SRCS := $(wildcard $(SRC)/producer/*.cpp)
+CONSUMER_SRCS := $(wildcard $(SRC)/consumer/*.cpp)
+SERVER_SRCS := $(wildcard $(SRC)/server/*.cpp)
 
 # object files
-COMMON_SHARED_SRCS := $(filter-out $(SRC_DIR)/common/database.cpp, $(COMMON_SRCS))
-COMMON_DB_SRCS := $(SRC_DIR)/common/database.cpp
+COMMON_CORE_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(COMMON_CORE_SRCS))
+DB_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(DB_SRC))
 
-COMMON_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(COMMON_SHARED_SRCS))
-COMMON_DB_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(COMMON_DB_SRCS))
-CONSUMER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(CONSUMER_SRCS)) $(COMMON_SHARED_OBJS) $(COMMON_DB_OBJS)
-PRODUCER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(PRODUCER_SRCS)) $(COMMON_SHARED_OBJS)
-SERVER_OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SERVER_SRCS))
+PRODUCER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(PRODUCER_SRCS))
+CONSUMER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(CONSUMER_SRCS))
+SERVER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(SERVER_SRCS))
 
-.PHONY: all clean consumer producer server
+# static libs
+LIBCOMMON := $(LIB)/libcommon.a
+LIBDB := $(LIB)/libdatabase.a
 
-all: consumer producer server
+.PHONY: all clean producer consumer server
 
-consumer: $(CONSUMER_EXE)
-producer: $(PRODUCER_EXE)
-server: $(SERVER_EXE)
+# targets
+all: producer consumer server
+
+# libraries
+$(LIBCOMMON): $(COMMON_CORE_OBJS)
+	@mkdir -p $(dir $@)
+	$(AR) $(ARFLAGS) $@ $^
+
+$(LIBDB): $(DB_OBJS)
+	@mkdir -p $(dir $@)
+	$(AR) $(ARFLAGS) $@ $^
 
 # linking executables
-$(CONSUMER_EXE): $(CONSUMER_OBJS)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(KAFKA_LDFLAGS) $(DB_LDFLAGS)
+producer: $(PRODUCER)
+consumer: $(CONSUMER)
+server: $(SERVER)
 
-$(PRODUCER_EXE): $(PRODUCER_OBJS)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(KAFKA_LDFLAGS) $(THREAD_LDFLAGS)
+$(PRODUCER): $(PRODUCER_OBJS) $(LIBCOMMON)
+	@mkdir -p $(BIN)
+	$(CXX) $^ -o $@ $(KAFKA_LIBS) $(THREAD_LIBS)
 
-$(SERVER_EXE): $(SERVER_OBJS)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+$(CONSUMER): $(CONSUMER_OBJS) $(LIBCOMMON) $(LIBDB)
+	@mkdir -p $(BIN)
+	$(CXX) $^ -o $@ $(KAFKA_LIBS) $(DB_LIBS)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(SERVER): $(SERVER_OBJS) $(LIBCOMMON)
+	@mkdir -p $(BIN)
+	$(CXX) $^ -o $@
+
+# compile rule
+$(OBJ)/%.o: $(SRC)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# clean build artifacts
+# clean
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD)
 
 # docker stuff
 docker-producer-build:
