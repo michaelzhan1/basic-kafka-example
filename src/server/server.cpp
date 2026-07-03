@@ -12,6 +12,7 @@
 
 #include "http.hpp"
 #include "signalhandler.hpp"
+#include "threadpool.hpp"
 
 /**
  * Class representing the HTTP server. It abstracts out setup and accepting and
@@ -57,13 +58,13 @@ class Server {
         address.sin_addr.s_addr = INADDR_ANY;
         address.sin_port = htons(port_);
 
-        // start server (let up to 3 clients wait in the queue)
+        // start server (let up to 128 clients wait in the queue)
         if (bind(server_fd_, (sockaddr*)&address, sizeof(address)) < 0) {
             perror("Bind failed");
             close(server_fd_);
             return;
         }
-        listen(server_fd_, 3);
+        listen(server_fd_, 128);
 
         std::cout << "Server is listening on port " << port_
                   << ". Press Ctrl+C to stop." << std::endl;
@@ -76,7 +77,7 @@ class Server {
 
     int get_fd() const { return server_fd_; }
 
-    void handle_client(int client_socket) {
+    static void handle_client(int client_socket) {
         // read request
         std::string request = receive_request(client_socket);
 
@@ -110,6 +111,9 @@ int main() {
         pfd.fd = server.get_fd();
         pfd.events = POLLIN;
 
+        // set up workers to handle clients
+        ThreadPool thread_pool(4);  // 4 worker threads
+
         while (SignalHandler::running()) {
             int poll_ret = poll(&pfd, 1, 500);  // wait for 0.5 seconds
             if (poll_ret < 0) {
@@ -127,7 +131,9 @@ int main() {
                 continue;  // error accepting connection, try again
             }
 
-            server.handle_client(new_socket);
+            thread_pool.enqueue([new_socket]() {
+                Server::handle_client(new_socket);
+            });
         }
     } catch (const std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
