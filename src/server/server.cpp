@@ -3,12 +3,12 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <atomic>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
 #include <iostream>
 #include <string>
+#include <syncstream>
 
 #include "http.hpp"
 #include "signalhandler.hpp"
@@ -83,8 +83,9 @@ class Server {
 
         if (!request.empty()) {
             // log request
-            std::cout << "Received request:\n"
-                      << request.substr(0, 100) << "..." << std::endl;
+            std::osyncstream(std::cout)
+                << "Received request:\n"
+                << request.substr(0, 100) << "..." << std::endl;
 
             // build response
             std::string html =
@@ -131,9 +132,8 @@ int main() {
                 continue;  // error accepting connection, try again
             }
 
-            thread_pool.enqueue([new_socket]() {
-                Server::handle_client(new_socket);
-            });
+            thread_pool.enqueue(
+                [new_socket]() { Server::handle_client(new_socket); });
         }
     } catch (const std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
