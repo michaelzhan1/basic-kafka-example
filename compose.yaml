@@ -1,4 +1,6 @@
+name: log-handler
 services:
+  # database
   timescaledb:
     image: timescale/timescaledb:latest-pg17
     ports:
@@ -42,6 +44,7 @@ services:
       timeout: 5s
       retries: 10
 
+  # kafka
   kafka:
     image: apache/kafka:latest
     ports:
@@ -88,6 +91,7 @@ services:
       "--if-not-exists",
     ]
 
+  # services
   producer:
     build:
       context: .
@@ -111,3 +115,11 @@ services:
         condition: service_completed_successfully
       pgbouncer:
         condition: service_healthy
+  
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    ports:
+      - 8080:8080

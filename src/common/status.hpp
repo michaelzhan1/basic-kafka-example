@@ -15,3 +15,5 @@ constexpr std::string_view to_string(Status status) {
     }
     return "UNKNOWN";
 }
+
+Status get_random_status();

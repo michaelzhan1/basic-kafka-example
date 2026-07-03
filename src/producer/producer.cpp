@@ -1,85 +1,65 @@
 #include <librdkafka/rdkafkacpp.h>
 #include <unistd.h>
 
-#include <chrono>
-#include <condition_variable>
-#include <csignal>
 #include <iostream>
-#include <mutex>
-#include <nlohmann/json.hpp>
-#include <random>
-#include <stop_token>
 #include <string>
-#include <thread>
-#include <vector>
+#include <syncstream>
 
 #include "logentry.hpp"
+#include "signalhandler.hpp"
 #include "status.hpp"
-
-std::condition_variable shutdown_cv;
-std::mutex shutdown_mtx;
-bool signal_received = false;
-
-void handle_signal(int) {
-    {
-        std::lock_guard<std::mutex> lock(shutdown_mtx);
-        signal_received = true;
-    }
-    shutdown_cv.notify_all();
-}
+#include "threadpool.hpp"
+#include "util.hpp"
 
 std::string get_self_hostname() {
     char hostname[1024];
-    gethostname(hostname, 1024);
+    if (gethostname(hostname, sizeof(hostname)) != 0) {
+        return "unknown";
+    }
     return std::string(hostname);
 }
 
-void producer_worker_job(std::stop_token stop_token,
-                         RdKafka::Producer* shared_producer, std::string topic,
-                         std::string hostname, int thread_id) {
-    std::string worker_id = hostname + "-worker-" + std::to_string(thread_id);
-    std::cout << "Starting producer worker: " << worker_id << std::endl;
+void start_service(ThreadPool& pool, RdKafka::Producer* producer,
+                   const std::string& topic, const std::string& service_id) {
+    auto work_loop = [producer, topic, service_id, &pool]() -> void {
+        Status status = get_random_status();
+        LogEntry log(service_id, status);
 
-    while (!stop_token.stop_requested()) {
-        double random_value = static_cast<double>(rand()) / RAND_MAX;
-        Status status;
-        if (random_value < 0.7) {
-            status = Status::OK;
-        } else if (random_value < 0.9) {
-            status = Status::WARN;
-        } else {
-            status = Status::ERROR;
-        }
-
-        LogEntry log(worker_id, status);
         std::string msg = log.to_json().dump();
-
-        shared_producer->produce(
+        RdKafka::ErrorCode err = producer->produce(
             topic,
             RdKafka::Topic::PARTITION_UA,    // unassigned, let kafka choose
             RdKafka::Producer::RK_MSG_COPY,  // copy payload
-            const_cast<char*>(msg.c_str()),  // message payload
+            const_cast<char*>(msg.data()),   // message payload
             msg.size(),                      // payload size
             nullptr, 0,                      // optional key and its size
             0,       // timestamp (0 defaults to current time)
             nullptr  // message opaque, not used here
         );
-
-        std::cout << "[" << worker_id << "] Produced message: " << msg
-                  << std::endl;
-
-        std::unique_lock<std::mutex> lock(shutdown_mtx);
-        if (shutdown_cv.wait_for(
-                lock, std::chrono::milliseconds(5000 + thread_id * 100), // 5 seconds for now
-                [] { return signal_received; })) {
-            break;  // exit loop if signal received
+        if (err != RdKafka::ERR_NO_ERROR) {
+            std::osyncstream(std::cerr)
+                << "Failed to produce message: " << RdKafka::err2str(err)
+                << '\n';
         }
-    }
+
+        std::osyncstream(std::cout) << "Produced message: " << msg << std::endl;
+
+        random_sleep(
+            500,
+            2000);  // sleep for a random duration between 0.5 and 2 seconds
+
+        if (SignalHandler::running()) {
+            pool.enqueue(
+                start_service, std::ref(pool), producer, topic,
+                service_id);  // re-enqueue the task for continuous operation
+        }
+    };
+
+    pool.enqueue(work_loop);
 }
 
 int main() {
-    std::signal(SIGINT, handle_signal);
-    std::signal(SIGTERM, handle_signal);
+    SignalHandler::setup();
 
     std::string brokers = "kafka:9092";
     std::string topic_name = "hello-world";
@@ -106,28 +86,18 @@ int main() {
 
     std::cout << "Created producer " << producer->name() << std::endl;
 
-    int num_workers = 4;
-    std::vector<std::jthread> worker_threads;
-    for (int i = 0; i < num_workers; ++i) {
-        worker_threads.emplace_back(producer_worker_job, producer, topic_name,
-                                    hostname, i);
+    // thread pool
+    ThreadPool thread_pool(4);
+    std::cout << "Starting producer workers..." << std::endl;
+
+    for (int i = 0; i < 4; i++) {
+        start_service(thread_pool, producer, topic_name,
+                      hostname + "-worker-" + std::to_string(i));
     }
 
-    while (true) {
-        {
-            std::lock_guard<std::mutex> lock(shutdown_mtx);
-            if (signal_received) {
-                break;
-            }
-        }
+    while (SignalHandler::running()) {
         producer->poll(1000);  // poll for delivery reports and events
     }
-
-    for (auto& worker : worker_threads) {
-        worker.request_stop();
-    }
-
-    worker_threads.clear();  // wait for all threads to finish
 
     // flush producer
     std::cout << "Flushing producer..." << std::endl;

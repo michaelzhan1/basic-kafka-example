@@ -1,10 +1,10 @@
+name: dev
 services:
   dev:
     build:
       context: .
       dockerfile: Dockerfile
       target: dev
-    user: "$(id -u):$(id -g)"
     tty: true
     stdin_open: true
     volumes:
