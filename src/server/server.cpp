@@ -92,8 +92,8 @@ class Server {
                 "<html><body><h1>Hello, World!</h1></body></html>";
 
             // send response
-            HTTPHandler::send_response(client_socket, html, HttpStatus::OK,
-                          HttpContentType::TEXT_HTML);
+            HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
+                          HTTPContentType::TEXT_HTML);
         }
 
         close(client_socket);

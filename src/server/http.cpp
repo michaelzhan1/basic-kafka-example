@@ -46,7 +46,7 @@ std::string HTTPHandler::receive_request(int socket) {
     return request;
 }
 
-std::string http_status_to_string(HttpStatus status) {
+std::string http_status_to_string(HTTPStatus status) {
     switch (status) {
         case OK:
             return "200 OK";
@@ -62,7 +62,7 @@ std::string http_status_to_string(HttpStatus status) {
     }
 }
 
-std::string http_content_type_to_string(HttpContentType content_type) {
+std::string http_content_type_to_string(HTTPContentType content_type) {
     switch (content_type) {
         case TEXT_HTML:
             return "text/html";
@@ -75,8 +75,8 @@ std::string http_content_type_to_string(HttpContentType content_type) {
     }
 }
 
-bool HTTPHandler::send_response(int socket, const std::string& msg, HttpStatus status,
-                   HttpContentType content_type) {
+bool HTTPHandler::send_response(int socket, const std::string& msg, HTTPStatus status,
+                   HTTPContentType content_type) {
     std::string response = "";
 
     response += "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
