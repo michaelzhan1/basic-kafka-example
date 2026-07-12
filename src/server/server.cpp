@@ -79,7 +79,7 @@ class Server {
 
     static void handle_client(int client_socket) {
         // read request
-        std::string request = receive_request(client_socket);
+        std::string request = HTTPHandler::receive_request(client_socket);
 
         if (!request.empty()) {
             // log request
@@ -92,7 +92,7 @@ class Server {
                 "<html><body><h1>Hello, World!</h1></body></html>";
 
             // send response
-            send_response(client_socket, html, HttpStatus::OK,
+            HTTPHandler::send_response(client_socket, html, HttpStatus::OK,
                           HttpContentType::TEXT_HTML);
         }
 

@@ -11,9 +11,10 @@ enum HttpStatus {
     INTERNAL_SERVER_ERROR = 500
 };
 
-std::string receive_request(int socket);
+class HTTPHandler {
+   public:
+    static std::string receive_request(int socket);
 
-bool send_response(int socket, const std::string& response, HttpStatus status,
-                   HttpContentType content_type);
-
-// TODO: make a http class
+    static bool send_response(int socket, const std::string& response,
+                              HttpStatus status, HttpContentType content_type);
+};

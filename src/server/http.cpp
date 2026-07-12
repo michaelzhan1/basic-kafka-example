@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 
-std::string receive_request(int socket) {
+std::string HTTPHandler::receive_request(int socket) {
     std::string request;
     char buffer[4096];
 
@@ -75,7 +75,7 @@ std::string http_content_type_to_string(HttpContentType content_type) {
     }
 }
 
-bool send_response(int socket, const std::string& msg, HttpStatus status,
+bool HTTPHandler::send_response(int socket, const std::string& msg, HttpStatus status,
                    HttpContentType content_type) {
     std::string response = "";
 
