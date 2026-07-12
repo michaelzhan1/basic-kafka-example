@@ -14,33 +14,19 @@
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
-/**
- * Class representing the HTTP server. It abstracts out setup and accepting and
- * handling connections.
- */
 class Server {
    private:
     int port_;
     int server_fd_;
 
    public:
-    /**
-     * Constructor
-     */
     explicit Server(int port) : port_(port), server_fd_(-1) {}
-
-    /**
-     * Destructor
-     */
     ~Server() {
         if (server_fd_ != -1) {
             close(server_fd_);
         }
     }
 
-    /**
-     * Setup
-     */
     void start() {
         server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (server_fd_ < 0) {
@@ -70,9 +56,6 @@ class Server {
                   << ". Press Ctrl+C to stop." << std::endl;
     }
 
-    /**
-     * Accept a new connection
-     */
     int accept_connection() { return accept(server_fd_, nullptr, nullptr); }
 
     int get_fd() const { return server_fd_; }
@@ -80,21 +63,32 @@ class Server {
     static void handle_client(int client_socket) {
         // read request
         std::string request = HTTPHandler::receive_request(client_socket);
-
-        if (!request.empty()) {
-            // log request
-            std::osyncstream(std::cout)
-                << "Received request:\n"
-                << request.substr(0, 100) << "..." << std::endl;
-
-            // build response
-            std::string html =
-                "<html><body><h1>Hello, World!</h1></body></html>";
-
-            // send response
-            HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
-                          HTTPContentType::TEXT_HTML);
+        if (request.empty()) {
+            std::cerr << "Failed to receive request or request timed out - "
+                         "empty request"
+                      << std::endl;
+            close(client_socket);
+            return;
         }
+
+        // parse request
+        HTTPRequest http_request = HTTPHandler::parse_request(request);
+
+        // log request
+        std::osyncstream(std::cout)
+            << "Received request:\n"
+            << request.substr(0, 100) << "..." << std::endl;
+
+        std::osyncstream(std::cout)
+            << "Parsed request: method=" << http_request.method
+            << ", path=" << http_request.path << std::endl;
+
+        // build response
+        std::string html = "<html><body><h1>Hello, World!</h1></body></html>";
+
+        // send response
+        HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
+                                   HTTPContentType::TEXT_HTML);
 
         close(client_socket);
     }

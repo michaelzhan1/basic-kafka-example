@@ -3,10 +3,6 @@
 #include <atomic>
 #include <csignal>
 
-/**
- * Class to handle SIGINT and SIGTERM signals for graceful shutdown of the
- * server.
- */
 class SignalHandler {
    private:
     static inline std::atomic<bool> run{true};

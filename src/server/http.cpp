@@ -7,7 +7,39 @@
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
+#include <sstream>
 #include <string>
+
+namespace {
+std::string http_status_to_string(HTTPStatus status) {
+    switch (status) {
+        case OK:
+            return "200 OK";
+        case BAD_REQUEST:
+            return "400 Bad Request";
+        case NOT_FOUND:
+            return "404 Not Found";
+        case INTERNAL_SERVER_ERROR:
+            return "500 Internal Server Error";
+        default:
+            return "500 Internal Server Error";  // default to internal server
+                                                 // error
+    }
+}
+
+std::string http_content_type_to_string(HTTPContentType content_type) {
+    switch (content_type) {
+        case TEXT_HTML:
+            return "text/html";
+        case TEXT_PLAIN:
+            return "text/plain";
+        case APPLICATION_JSON:
+            return "application/json";
+        default:
+            return "text/plain";  // default to plain text
+    }
+}
+}  // namespace
 
 std::string HTTPHandler::receive_request(int socket) {
     std::string request;
@@ -46,37 +78,25 @@ std::string HTTPHandler::receive_request(int socket) {
     return request;
 }
 
-std::string http_status_to_string(HTTPStatus status) {
-    switch (status) {
-        case OK:
-            return "200 OK";
-        case BAD_REQUEST:
-            return "400 Bad Request";
-        case NOT_FOUND:
-            return "404 Not Found";
-        case INTERNAL_SERVER_ERROR:
-            return "500 Internal Server Error";
-        default:
-            return "500 Internal Server Error";  // default to internal server
-                                                 // error
+HTTPRequest HTTPHandler::parse_request(const std::string& request) {\
+    std::istringstream request_stream(request);
+    std::string line;
+
+    if (std::getline(request_stream, line)) {
+        std::istringstream line_stream(line);
+        HTTPRequest http_request;
+
+        if (line_stream >> http_request.method >> http_request.path) {
+            return http_request;
+        }
     }
+
+    return HTTPRequest{};  // return empty request on failure
 }
 
-std::string http_content_type_to_string(HTTPContentType content_type) {
-    switch (content_type) {
-        case TEXT_HTML:
-            return "text/html";
-        case TEXT_PLAIN:
-            return "text/plain";
-        case APPLICATION_JSON:
-            return "application/json";
-        default:
-            return "text/plain";  // default to plain text
-    }
-}
-
-bool HTTPHandler::send_response(int socket, const std::string& msg, HTTPStatus status,
-                   HTTPContentType content_type) {
+bool HTTPHandler::send_response(int socket, const std::string& msg,
+                                HTTPStatus status,
+                                HTTPContentType content_type) {
     std::string response = "";
 
     response += "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
