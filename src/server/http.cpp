@@ -78,7 +78,7 @@ std::string HTTPHandler::receive_request(int socket) {
     return request;
 }
 
-HTTPRequest HTTPHandler::parse_request(const std::string& request) {\
+HTTPRequest HTTPHandler::parse_request(const std::string& request) {
     std::istringstream request_stream(request);
     std::string line;
 
@@ -122,4 +122,10 @@ bool HTTPHandler::send_response(int socket, const std::string& msg,
     }
 
     return true;
+}
+
+bool HTTPHandler::send_404(int socket) {
+    std::string html = "<html><body><h1>404 Not Found</h1></body></html>";
+    return send_response(socket, html, HTTPStatus::NOT_FOUND,
+                         HTTPContentType::TEXT_HTML);
 }

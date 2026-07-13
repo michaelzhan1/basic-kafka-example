@@ -11,6 +11,7 @@
 #include <syncstream>
 
 #include "http.hpp"
+#include "router.hpp"
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
@@ -18,9 +19,11 @@ class Server {
    private:
     int port_;
     int server_fd_;
+    Router& router_;
 
    public:
-    explicit Server(int port) : port_(port), server_fd_(-1) {}
+    explicit Server(int port, Router& r)
+        : port_(port), server_fd_(-1), router_(r) {}
     ~Server() {
         if (server_fd_ != -1) {
             close(server_fd_);
@@ -60,7 +63,7 @@ class Server {
 
     int get_fd() const { return server_fd_; }
 
-    static void handle_client(int client_socket) {
+    void handle_client(int client_socket) {
         // read request
         std::string request = HTTPHandler::receive_request(client_socket);
         if (request.empty()) {
@@ -73,6 +76,9 @@ class Server {
 
         // parse request
         HTTPRequest http_request = HTTPHandler::parse_request(request);
+
+        // handle request
+        router_.handle(http_request.path, client_socket);
 
         // log request
         std::osyncstream(std::cout)
@@ -97,8 +103,16 @@ class Server {
 int main() {
     SignalHandler::setup();
 
+    Router router;
+    router.add_route("/", [](int client_socket) {
+        std::string html =
+            "<html><body><h1>Welcome to the Home Page</h1></body></html>";
+        HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
+                                   HTTPContentType::TEXT_HTML);
+    });
+
     try {
-        Server server(8080);
+        Server server(8080, router);
         server.start();
 
         // set up polling
@@ -127,7 +141,7 @@ int main() {
             }
 
             thread_pool.enqueue(
-                [new_socket]() { Server::handle_client(new_socket); });
+                [new_socket, &server]() { server.handle_client(new_socket); });
         }
     } catch (const std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;

@@ -24,4 +24,5 @@ class HTTPHandler {
 
     static bool send_response(int socket, const std::string& response,
                               HTTPStatus status, HTTPContentType content_type);
+    static bool send_404(int socket);
 };
