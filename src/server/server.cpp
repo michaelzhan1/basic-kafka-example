@@ -13,6 +13,7 @@
 #include "http.hpp"
 #include "router.hpp"
 #include "routes.hpp"
+#include "routes/favicon.hpp"
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
@@ -106,6 +107,7 @@ int main() {
 
     Router router;
     router.add_route("/", Routes::index_route);
+    router.add_route("/favicon.ico", get_favicon);
 
     try {
         Server server(8080, router);

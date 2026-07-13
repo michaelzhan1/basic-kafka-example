@@ -35,6 +35,8 @@ std::string http_content_type_to_string(HTTPContentType content_type) {
             return "text/plain";
         case APPLICATION_JSON:
             return "application/json";
+        case IMAGE_ICON:
+            return "image/x-icon";
         default:
             return "text/plain";  // default to plain text
     }
