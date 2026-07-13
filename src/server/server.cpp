@@ -12,6 +12,7 @@
 
 #include "http.hpp"
 #include "router.hpp"
+#include "routes.hpp"
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
@@ -104,12 +105,7 @@ int main() {
     SignalHandler::setup();
 
     Router router;
-    router.add_route("/", [](int client_socket) {
-        std::string html =
-            "<html><body><h1>Welcome to the Home Page</h1></body></html>";
-        HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
-                                   HTTPContentType::TEXT_HTML);
-    });
+    router.add_route("/", Routes::index_route);
 
     try {
         Server server(8080, router);
