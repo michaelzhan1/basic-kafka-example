@@ -10,10 +10,10 @@
 #include <string>
 #include <syncstream>
 
-#include "http.hpp"
+#include "http/http.hpp"
 #include "router.hpp"
-#include "routes.hpp"
 #include "routes/favicon.hpp"
+#include "routes/index.hpp"
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
@@ -106,7 +106,7 @@ int main() {
     SignalHandler::setup();
 
     Router router;
-    router.add_route("/", Routes::index_route);
+    router.add_route("/", get_index);
     router.add_route("/favicon.ico", get_favicon);
 
     try {

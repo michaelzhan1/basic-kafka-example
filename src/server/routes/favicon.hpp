@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../http.hpp"
+#include "../http/http.hpp"
 
 void get_favicon(int client_socket) {
     std::string path = "./src/server/assets/favicon.ico";
