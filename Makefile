@@ -29,7 +29,7 @@ COMMON_CORE_SRCS := $(filter-out $(DB_SRC),$(COMMON_SRCS))
 
 PRODUCER_SRCS := $(wildcard $(SRC)/producer/*.cpp)
 CONSUMER_SRCS := $(wildcard $(SRC)/consumer/*.cpp)
-SERVER_SRCS := $(wildcard $(SRC)/server/*.cpp)
+SERVER_SRCS := $(shell find $(SRC)/server -name '*.cpp' | sort)
 
 # object files
 COMMON_CORE_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(COMMON_CORE_SRCS))
@@ -38,6 +38,8 @@ DB_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(DB_SRC))
 PRODUCER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(PRODUCER_SRCS))
 CONSUMER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(CONSUMER_SRCS))
 SERVER_OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(SERVER_SRCS))
+
+$(SERVER_OBJS): CXXFLAGS += -Isrc/server
 
 # static libs
 LIBCOMMON := $(LIB)/libcommon.a
