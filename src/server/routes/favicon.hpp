@@ -21,16 +21,6 @@ void get_favicon(int client_socket) {
     std::vector<char> buffer(file_size);
     file.read(buffer.data(), file_size);
 
-    // 3. Construct the HTTP Headers
-    std::string response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: image/x-icon\r\n"
-        "Content-Length: " +
-        std::to_string(file_size) +
-        "\r\n"
-        "Connection: close\r\n\r\n";
-
-    // 4. Send Header then Binary Data
-    send(client_socket, response.c_str(), response.size(), 0);
-    send(client_socket, buffer.data(), file_size, 0);
+    // send response
+    HTTPHandler::send_response(client_socket, buffer, HTTPStatus::OK, HTTPContentType::IMAGE_ICON);
 }

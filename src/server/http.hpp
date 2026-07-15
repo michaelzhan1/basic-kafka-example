@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 enum HTTPContentType {
     TEXT_HTML = 0,
@@ -28,6 +29,8 @@ class HTTPHandler {
     static HTTPRequest parse_request(const std::string& request);
 
     static bool send_response(int socket, const std::string& response,
+                              HTTPStatus status, HTTPContentType content_type);
+    static bool send_response(int socket, const std::vector<char>& response,
                               HTTPStatus status, HTTPContentType content_type);
     static bool send_404(int socket);
 };

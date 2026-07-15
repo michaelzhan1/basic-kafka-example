@@ -99,21 +99,26 @@ HTTPRequest HTTPHandler::parse_request(const std::string& request) {
 bool HTTPHandler::send_response(int socket, const std::string& msg,
                                 HTTPStatus status,
                                 HTTPContentType content_type) {
-    std::string response = "";
+    std::vector<char> data(msg.begin(), msg.end());
+    return send_response(socket, data, status, content_type);
+}
 
-    response += "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
-    response +=
-        "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
-    response += "Content-Length: " + std::to_string(msg.size()) + "\r\n";
-    response += "\r\n";  // end of headers
-    response += msg;     // body
+bool HTTPHandler::send_response(int socket, const std::vector<char>& msg,
+                                HTTPStatus status,
+                                HTTPContentType content_type) {
+    std::string headers = "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
+    headers += "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
+    headers += "Content-Length: " + std::to_string(msg.size()) + "\r\n";
+    headers += "\r\n";  // end of headers
+
+    std::vector<char> packet(headers.begin(), headers.end());
+    packet.insert(packet.end(), msg.begin(), msg.end());
 
     ssize_t total_sent = 0;
-    ssize_t response_length = response.size();
-
-    while (total_sent < response_length) {
-        ssize_t bytes_sent = send(socket, response.c_str() + total_sent,
-                                  response_length - total_sent, 0);
+    ssize_t packet_length = packet.size();
+    while (total_sent < packet_length) {
+        ssize_t bytes_sent = send(socket, packet.data() + total_sent,
+                                  packet_length - total_sent, 0);
 
         if (bytes_sent < 0) {
             perror("Send error");
