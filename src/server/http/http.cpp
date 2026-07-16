@@ -10,6 +10,8 @@
 #include <sstream>
 #include <string>
 
+#include "util.hpp"
+
 namespace {
 std::string http_status_to_string(HTTPStatus status) {
     switch (status) {
@@ -107,7 +109,8 @@ bool HTTPHandler::send_response(int socket, const std::vector<char>& msg,
                                 HTTPStatus status,
                                 HTTPContentType content_type) {
     std::string headers = "HTTP/1.1 " + http_status_to_string(status) + "\r\n";
-    headers += "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
+    headers +=
+        "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
     headers += "Content-Length: " + std::to_string(msg.size()) + "\r\n";
     headers += "\r\n";  // end of headers
 

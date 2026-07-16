@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     git \
     gdb \
     valgrind \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=1000

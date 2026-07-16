@@ -8,11 +8,13 @@
 
 class Router {
    public:
-    using HandlerFunc = std::function<void(int)>;
+    using HandlerFunc = std::function<void(int, const HTTPRequest&)>;
 
     void add_route(const std::string& path, HandlerFunc handler);
-    void handle(const std::string& path, int client_socket);
+    void handle(int client_socket, const HTTPRequest& req);
 
    private:
     std::unordered_map<std::string, HandlerFunc> routes;
 };
+
+std::string normalize_path(const std::string& path);

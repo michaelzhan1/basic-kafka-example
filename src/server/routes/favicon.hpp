@@ -6,7 +6,7 @@
 
 #include "../http/http.hpp"
 
-void get_favicon(int client_socket) {
+void get_favicon(int client_socket, const HTTPRequest&) {
     std::string path = "./src/server/assets/favicon.ico";
 
     std::ifstream file(path, std::ios::binary | std::ios::ate);

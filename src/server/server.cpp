@@ -14,6 +14,7 @@
 #include "router/router.hpp"
 #include "routes/favicon.hpp"
 #include "routes/index.hpp"
+#include "routes/logs.hpp"
 #include "signalhandler.hpp"
 #include "threadpool.hpp"
 
@@ -80,7 +81,7 @@ class Server {
         HTTPRequest http_request = HTTPHandler::parse_request(request);
 
         // handle request
-        router_.handle(http_request.path, client_socket);
+        router_.handle(client_socket, http_request);
 
         // log request
         std::osyncstream(std::cout)
@@ -90,13 +91,6 @@ class Server {
         std::osyncstream(std::cout)
             << "Parsed request: method=" << http_request.method
             << ", path=" << http_request.path << std::endl;
-
-        // build response
-        std::string html = "<html><body><h1>Hello, World!</h1></body></html>";
-
-        // send response
-        HTTPHandler::send_response(client_socket, html, HTTPStatus::OK,
-                                   HTTPContentType::TEXT_HTML);
 
         close(client_socket);
     }
@@ -108,6 +102,7 @@ int main() {
     Router router;
     router.add_route("/", get_index);
     router.add_route("/favicon.ico", get_favicon);
+    router.add_route("/logs", get_logs);
 
     try {
         Server server(8080, router);

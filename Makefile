@@ -1,6 +1,6 @@
 # compiler
 CXX := g++
-CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Iinclude -Isrc/common
+CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Wunused-variable -Werror -Iinclude -Isrc/common
 
 AR := ar
 ARFLAGS := rcs
