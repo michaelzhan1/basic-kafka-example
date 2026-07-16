@@ -3,4 +3,5 @@
 #include "../http/http.hpp"
 
 void get_logs(int, const HTTPRequest&) {
+    // TODO: fill out
 }
