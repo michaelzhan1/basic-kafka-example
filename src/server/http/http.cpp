@@ -112,6 +112,7 @@ bool HTTPHandler::send_response(int socket, const std::vector<char>& msg,
     headers +=
         "Content-Type: " + http_content_type_to_string(content_type) + "\r\n";
     headers += "Content-Length: " + std::to_string(msg.size()) + "\r\n";
+    headers += "Access-Control-Allow-Origin: *\r\n";  // CORS header
     headers += "\r\n";  // end of headers
 
     std::vector<char> packet(headers.begin(), headers.end());

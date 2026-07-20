@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="index.css">
+  <title>Log Viewer</title>
+</head>
+<body>
+  <h1>
+    Log Viewer
+  </h1>
+  <p>This is a very basic clone of Humio to view logs.</p>
+  <form id="log-form">
+    <label for="start">Start</label>
+    <input type="datetime-local" id="start" name="start">
+    <label for="end">End</label>
+    <input type="datetime-local" id="end" name="end">
+    <button type="submit">View Logs</button>
+  </form>
+  <div>
+    <textarea class="log-area" readonly></textarea>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
