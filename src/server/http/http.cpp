@@ -35,7 +35,7 @@ std::string http_content_type_to_string(HTTPContentType content_type) {
             return "text/html";
         case TEXT_PLAIN:
             return "text/plain";
-        case APPLICATION_JSON:
+        case JSON:
             return "application/json";
         case IMAGE_ICON:
             return "image/x-icon";

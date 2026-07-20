@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "../http/http.hpp"
+#include "http/http.hpp"
 
 class Router {
    public:
@@ -16,5 +16,3 @@ class Router {
    private:
     std::unordered_map<std::string, HandlerFunc> routes;
 };
-
-std::string normalize_path(const std::string& path);

@@ -6,7 +6,7 @@
 enum HTTPContentType {
     TEXT_HTML = 0,
     TEXT_PLAIN = 1,
-    APPLICATION_JSON = 2,
+    JSON = 2,
     IMAGE_ICON = 3
 };
 
