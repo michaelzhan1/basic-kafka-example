@@ -19,9 +19,17 @@
     <button type="submit">View Logs</button>
   </form>
   <div>
-    <textarea class="log-area" readonly></textarea>
+    <textarea id="log-display" readonly></textarea>
   </div>
-
+  <div>
+    <h2>Report</h2>
+    <p>
+      <strong>Total Count: </strong><span id="total-count"></span><br/>
+      <strong>Errors: </strong><span id="error-count"></span><br/>
+      <strong>Warnings: </strong><span id="warning-count"></span><br/>
+      <strong>Info: </strong><span id="info-count"></span><br/>
+    </p>
+  </div>
   <script src="index.js"></script>
 </body>
 </html>

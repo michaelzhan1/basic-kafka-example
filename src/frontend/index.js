@@ -1,3 +1,7 @@
+const INFO = 0;
+const WARNING = 1;
+const ERROR = 2;
+
 document.getElementById("log-form").addEventListener("submit", async function(e) {
   e.preventDefault();
 
@@ -22,5 +26,22 @@ document.getElementById("log-form").addEventListener("submit", async function(e)
   }
   const resp = await fetch(url.toString());
   const data = await resp.json();
-  console.log(data);
+  
+  const text = data.map(log => {
+    const date = new Date(log.timestamp * 1000);
+    const status = log.status === 0 ? "INFO" : log.status === 1 ? "WARNING" : "ERROR";
+    const worker = log.worker_id;
+    return `[${date.toISOString()}] [Worker ${worker}] ${status}`;
+  }).join("\n");
+  document.getElementById("log-display").textContent = text;
+
+  const errorCount = data.filter(log => log.status === ERROR).length;
+  const warningCount = data.filter(log => log.status === WARNING).length;
+  const infoCount = data.filter(log => log.status === INFO).length;
+
+  document.getElementById("total-count").textContent = data.length;
+  document.getElementById("error-count").textContent = errorCount;
+  document.getElementById("warning-count").textContent = warningCount;
+  document.getElementById("info-count").textContent = infoCount;
 });
+ 

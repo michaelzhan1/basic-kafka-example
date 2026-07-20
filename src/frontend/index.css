@@ -1,4 +1,4 @@
-.log-area {
-  width: 500px;
+#log-display {
+  width: 800px;
   height: 250px;
 }
