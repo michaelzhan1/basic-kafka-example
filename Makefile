@@ -75,9 +75,9 @@ $(CONSUMER): $(CONSUMER_OBJS) $(LIBCOMMON) $(LIBDB)
 	@mkdir -p $(BIN)
 	$(CXX) $^ -o $@ $(KAFKA_LIBS) $(DB_LIBS)
 
-$(SERVER): $(SERVER_OBJS) $(LIBCOMMON)
+$(SERVER): $(SERVER_OBJS) $(LIBDB) $(LIBCOMMON)
 	@mkdir -p $(BIN)
-	$(CXX) $^ -o $@
+	$(CXX) $^ -o $@ $(DB_LIBS)
 
 # compile rule
 $(OBJ)/%.o: $(SRC)/%.cpp
