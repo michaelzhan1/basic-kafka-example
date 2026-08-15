@@ -123,3 +123,15 @@ services:
       target: server
     ports:
       - 8080:8080
+    
+  frontend:
+    image: golang:alpine
+    working_dir: /app
+    volumes:
+      - ./src/frontend:/app
+    ports:
+      - 8081:8081
+    command:
+      - go
+      - run
+      - main.go
